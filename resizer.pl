@@ -34,6 +34,9 @@ my $height_ratio   = 1.5; # What do you multiply width to get height
 
 ### Pragmata
 
+my $pref_height = int( $default_size * $height_ratio );
+my $pref_width  = $default_size;
+
 my $imagedir = $default_image;
 
 if (! -e $imagedir) { die "ERROR: Image directory $imagedir dosen't exist\n"; }
@@ -117,19 +120,39 @@ sub makethumb {
   my ($new_height,$new_width);
 
   if ( $current_ratio > $height_ratio ) { # tall and narrow
-    my $delta   = $default_size / $width;
-    $new_height = $height * $delta;
-    $new_width  = $default_size;
+    my $delta   = $pref_width / $width;
+    $new_height = int($height * $delta);
+    $new_width  = $pref_width;
   } elsif ( $height_ratio > $current_ratio ) { # Fat and wide
-    my $delta   = ( $default_size * $height_ratio ) / $height;
-    $new_height = ( $default_size * $height_ratio );
-    $new_width  = $width * $delta;
+    my $delta   = $pref_height / $height;
+    $new_height = $pref_height;
+    $new_width  = int($width * $delta);
   } else { # perfect size
-    $new_height = $default_size * $height_ratio;
-    $new_width  = $default_size;
+    $new_height = $pref_height;
+    $new_width  = $pref_width;
   }
 
   $image->Scale(height=>$new_height,width=>$new_width);
+
+  if ( $new_width != $pref_width ) {
+    my $delta = $new_width - $pref_width;
+
+    my $x1 = int($delta/2);
+    my $x2 = $delta - $x1;
+
+    $image->Crop( 'x' => $x1 );
+    $image->Crop( 'x' => (-1 * $x2) );
+  }
+
+  if ( $new_height != $pref_height ) {
+    my $delta = $new_height - $pref_height;
+
+    my $y1 = int($delta/2);
+    my $y2 = $delta - $y1;
+
+    $image->Crop( 'y' => $y1 );
+    $image->Crop( 'y' => (-1 * $y2) );
+  }
 
   $width  = $image->Get('width' );
   $height = $image->Get('height');
