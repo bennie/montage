@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use Image::Magick;
+use Math::Complex;
 use Storable;
 use strict;
 
@@ -148,59 +149,27 @@ sub find_closest {
   my $b = shift @_;
   my $o = shift @_;
 
-  my ( $best_r, $best_g, $best_b, $best_o );
-  my ( $diff_r, $diff_g, $diff_b, $diff_o );
-  my ( @r, @g, @b, @o );
+  my @best;
+  my $dist;
 
   for my $file ( keys %palette ) {
-    my $test_r = $palette{$file}->[0];
-    my $test_g = $palette{$file}->[1];
-    my $test_b = $palette{$file}->[2];
-    my $test_o = $palette{$file}->[3];
 
-    my $delta_r = abs($r - $test_r);
-    my $delta_g = abs($g - $test_g);
-    my $delta_b = abs($b - $test_b);
-    my $delta_o = abs($o - $test_o);
+    my $tr = $palette{$file}->[0];
+    my $tg = $palette{$file}->[1];
+    my $tb = $palette{$file}->[2];
+    my $to = $palette{$file}->[3];
 
-    if ( $delta_r < $diff_r or not $diff_r ) {
-       $diff_r = $delta_r;
-       @r = ($file);
-    } elsif ( $delta_r == $diff_r ) {
-       push @r, $file;
-    }
+    my $tdist = sqrt(($r-$tr)^2 + ($g-$tg)^2 + ($b-$tb)^2);
 
-    if ( $delta_g < $diff_g or not $diff_g ) {
-       $diff_g = $delta_g;
-       @g = ($file);
-    } elsif ( $delta_g == $diff_g ) {
-       push @g, $file;
-    }
-
-    if ( $delta_b < $diff_b or not $diff_b ) {
-       $diff_b = $delta_b;
-       @b = ($file);
-    } elsif ( $delta_b == $diff_b ) {
-       push @b, $file;
-    }
-
-  }
-
-  my @candidates = @r, @g, @b;
-  my $goal = $r + $g + $b;
-
-  my $best_delta;
-  my $best_file;
-
-  for my $file (@candidates) {
-    my $color = $palette{$file};
-    my $delta = abs($goal - $color->[0] - $color->[1] - $color->[2]);
-    if ( not $best_delta or $delta < $best_delta ) {
-      $best_file = $file;
-      $best_delta = $delta;
+    if ( not defined $dist or $tdist < $dist ) {
+      @best = ( $file );
+      $dist = $tdist;
+    } elsif ( defined $dist and $dist == $tdist ) {
+      push @best, $file;
     }
   }
-  
-  return wantarray ? ( $best_file, $best_delta ) : $best_file;
+
+  warn "Dist: $dist\n" if $dist <= 0;
+
+  return wantarray ? ( $best[0], $dist ) : $best[0];
 }
-
