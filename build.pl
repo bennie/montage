@@ -124,7 +124,7 @@ sub color_check {
   $fin_x = $fin_x % $upscale ? int($fin_x/$upscale)+1 : int($fin_x/$upscale);
   $fin_y = $fin_y % $upscale ? int($fin_y/$upscale)+1 : int($fin_y/$upscale);
 
-  my ($ar, $ag, $ab, $ao, $count);
+  my ($ar, $ag, $ab, $count);
 
   for my $x ( $start_x .. $fin_x ) {
     for my $y ( $start_y .. $fin_y ) {
@@ -132,24 +132,24 @@ sub color_check {
       $ar += $nr;
       $ag += $nb;
       $ab += $ng;
-      $ao += $no;
       $count++;
     }
   }
 
+  my $max = $image->MaxRGB;
+
   my $r = int($ar/$count);
   my $g = int($ag/$count);
   my $b = int($ab/$count);
-  my $o = int($ao/$count);
 
-  return ($r, $g, $b, $o);
+  return ($r, $g, $b, $max);
 }
 
 sub find_closest {
   my $r = shift @_;
   my $g = shift @_;
   my $b = shift @_;
-  my $o = shift @_;
+  my $max = shift @_;
 
   my @best;
   my $dist = 120000; # 16 bit color?
@@ -159,9 +159,9 @@ sub find_closest {
     my $tr = $palette{$file}->[0];
     my $tg = $palette{$file}->[1];
     my $tb = $palette{$file}->[2];
-    my $to = $palette{$file}->[3];
+    my $tm = $palette{$file}->[3];
 
-    my $tdist = sqrt(($r-$tr)^2 + ($g-$tg)^2 + ($b-$tb)^2);
+    my $tdist = sqrt(($r-$tr)**2 + ($g-$tg)**2 + ($b-$tb)**2);
 
     if ( $tdist < $dist ) {
       @best = ( $file );

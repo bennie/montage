@@ -17,7 +17,9 @@ for my $file (@ARGV) {
   my $ret = $image->Read($file);
   warn "$ret" if $ret;
 
-  my ($ar, $ag, $ab, $au, $count);
+  my $max = $image->MaxRGB;
+
+  my $ar = my $ag = my $ab = my $count = 0;
 
   my $width  = $image->Get('width' );
   my $height = $image->Get('height');
@@ -28,7 +30,6 @@ for my $file (@ARGV) {
       $ar += $nr;
       $ag += $nb;
       $ab += $ng;
-      $au += $nu;
       $count++;
     }
   }
@@ -36,10 +37,9 @@ for my $file (@ARGV) {
   my $r = int($ar/$count);
   my $g = int($ag/$count);
   my $b = int($ab/$count);
-  my $u = int($au/$count);
 
-  $palette{$file} = [ $r, $g, $b, $u ];
-  print "$r $g $b $u : $file\n";
+  $palette{$file} = [ $r, $g, $b, $max ];
+  print "$r $g $b ($max) : $file\n";
 }
 
 store \%palette, $out;

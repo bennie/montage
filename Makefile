@@ -3,9 +3,10 @@ all: output.png
 clean:
 	rm -f resized/*
 
-resize: images
-	mkdir -p resized
-	./resizer.pl
+resize: 
+	rm -f data/resized.txt
+	make data/resized.txt
+	
 
 data:
 	mkdir -p $@
@@ -15,9 +16,14 @@ data/goal.jpg: data
 	@echo You should put the file in data/goal.jpg we should pixelify
 	@echo
 
-data/palette.db: data
-	make clean resize 
-	./palette.pl $@ resized/*.jpg	
+data/palette.db: data/resized.txt
+	./palette.pl $@ resized/*
+
+data/resized.txt: data
+	make clean
+	mkdir -p resized
+	./resizer.pl
+	touch $@
 
 images:
 	@echo
