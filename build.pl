@@ -12,7 +12,7 @@ use warnings;
 my $pixel_width  = 100;
 my $pixel_height = 77;
 
-my $upscale = 3;
+my $upscale = 2;
 
 #my $pixel_width  = 20;
 #my $pixel_height = 15;
@@ -146,20 +146,13 @@ sub color_check {
 }
 
 sub find_closest {
-  my $r = shift @_;
-  my $g = shift @_;
-  my $b = shift @_;
-  my $max = shift @_;
+  my ($r,$g,$b) = &resample(@_);
 
   my @best;
-  my $dist = 120000; # 16 bit color?
+  my $dist = 450; # 8 bit color reduced
 
   for my $file ( keys %palette ) {
-
-    my $tr = $palette{$file}->[0];
-    my $tg = $palette{$file}->[1];
-    my $tb = $palette{$file}->[2];
-    my $tm = $palette{$file}->[3];
+    my ($tr,$tg,$tb) = &resample(@{$palette{$file}});
 
     my $tdist = sqrt(($r-$tr)**2 + ($g-$tg)**2 + ($b-$tb)**2);
 
@@ -174,4 +167,23 @@ sub find_closest {
   warn "Dist: $dist\n" if $dist <= 0;
 
   return wantarray ? ( $best[0], $dist ) : $best[0];
+}
+
+sub resample {
+  my $r_in  = $_[0];
+  my $g_in  = $_[1];
+  my $b_in  = $_[2];
+  my $depth = $_[3];
+
+  my $resample_factor = ( $depth + 1 ) / 256;
+
+  my $r = int($r_in/$resample_factor);
+  my $g = int($g_in/$resample_factor);
+  my $b = int($b_in/$resample_factor);
+
+  $r++ if $r_in % $resample_factor;
+  $g++ if $g_in % $resample_factor;
+  $b++ if $b_in % $resample_factor;
+
+  return ($r,$g,$b);
 }
