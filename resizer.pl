@@ -20,33 +20,17 @@
 
 select((select(STDOUT),$|=1)[0]);
 
+use Image::Magick;
 use strict;
-
-my @errors;
-
-eval { require Image::Magick; } || push @errors, 'Image::Magick';
-eval { require Term::Query;   } || push @errors, 'Term::Query';
-
-if (@errors) {
-  print "\nOOPS! - Required modules not found:\n\n";
-  for my $next_trick (@errors) { print "             $next_trick\n"; }
-  print "\nYou will need to install these modules.\nFor more information, ",
-        "please read the documentation.\n\n";
-  exit 1;
-} else { 
-  @errors = (); 
-}
-
-import Image::Magick;
-import Term::Query 'query';
 
 ### Confuscate
 
 my $debug = 1;
 
 my $default_image  = 'images';
-my $default_size   = 100;
 my $default_resize = 'resized';
+my $default_size   = 100;
+my $height_ratio   = 1.5; # What do you multiply width to get height
 
 ### Pragmata
 
@@ -61,9 +45,6 @@ my $thumbdir = $default_resize;
 if (! -e $thumbdir) { print "WARN: Directory $thumbdir dosen't exist, creating.\n"; system("mkdir $thumbdir"); }
 if (! -d $thumbdir) { die "ERROR: $thumbdir is not a directory\n"; }
 if (! -w $thumbdir) { die "ERROR: You do not have permissions to write to $thumbdir\n"; }
-
-my $pref_width = my $pref_height = $default_size;
-my $upsize = 0;
 
 my @files;
 
@@ -116,7 +97,13 @@ sub makethumb {
   
   my $image = Image::Magick->new;
   my $ret = $image->Read($infile);
-  warn "$ret" if $ret;
+
+  $debug && $ret && do {
+     printf "%31.31s", $ret;
+     print " |  skip! |\n";
+  };
+
+  next if $ret;
 
   my $width  = $image->Get('width' );
   my $height = $image->Get('height');
@@ -126,15 +113,23 @@ sub makethumb {
     print  ' | ';
   };
 
-  if ( $height <= $pref_height && $width <= $pref_width && $upsize == 0 ) {
-    # Leave the size the same!
-  } elsif ( $height > $width ) {
-    my $newwidth = int (($pref_height / $height) * $width);
-    $image->Scale(height=>$pref_height,width=>$newwidth);
-  } else {
-    my $newheight = int (($pref_width / $width) * $height);
-    $image->Scale(height=>$newheight,width=>$pref_width);
+  my $current_ratio = $height / $width;
+  my ($new_height,$new_width);
+
+  if ( $current_ratio > $height_ratio ) { # tall and narrow
+    my $delta   = $default_size / $width;
+    $new_height = $height * $delta;
+    $new_width  = $default_size;
+  } elsif ( $height_ratio > $current_ratio ) { # Fat and wide
+    my $delta   = ( $default_size * $height_ratio ) / $height;
+    $new_height = ( $default_size * $height_ratio );
+    $new_width  = $width * $delta;
+  } else { # perfect size
+    $new_height = $default_size * $height_ratio;
+    $new_width  = $default_size;
   }
+
+  $image->Scale(height=>$new_height,width=>$new_width);
 
   $width  = $image->Get('width' );
   $height = $image->Get('height');
@@ -156,4 +151,3 @@ sub is_image {
   if ( $file =~ /.bmp$/i || $file =~ /.gif$/i || $file =~ /.jpg$/i ||
        $file =~ /.png$/i || $file =~ /.psd$/i ) { return 1 } else { return 0 }
 }
-
