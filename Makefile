@@ -8,7 +8,7 @@ resize:
 	make data/resized.txt
 	
 
-data:
+data resized:
 	mkdir -p $@
 
 data/goal.jpg: data
@@ -19,9 +19,7 @@ data/goal.jpg: data
 data/palette.db: data/resized.txt
 	./palette.pl $@ resized/*
 
-data/resized.txt: data
-	make clean
-	mkdir -p resized
+data/resized.txt: data resized
 	./resizer.pl
 	touch $@
 
