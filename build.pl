@@ -154,7 +154,7 @@ sub find_closest {
   for my $file ( keys %palette ) {
     my ($tr,$tg,$tb) = &resample(@{$palette{$file}});
 
-    my $tdist = sqrt(($r-$tr)**2 + ($g-$tg)**2 + ($b-$tb)**2);
+    my $tdist = int( sqrt(($r-$tr)**2 + ($g-$tg)**2 + ($b-$tb)**2) );
 
     if ( $tdist < $dist ) {
       @best = ( $file );
@@ -166,7 +166,9 @@ sub find_closest {
 
   warn "Dist: $dist\n" if $dist <= 0;
 
-  return wantarray ? ( $best[0], $dist ) : $best[0];
+  my $rand = $best[int rand($#best + 1)];
+
+  return wantarray ? ( $rand, "$dist ".scalar(@best) ) : $rand;
 }
 
 sub resample {
