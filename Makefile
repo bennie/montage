@@ -1,7 +1,7 @@
 all: output.png
 
 clean:
-	rm -f resized
+	rm -f resized/*
 
 resize: images
 	mkdir -p resized

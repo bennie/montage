@@ -2,7 +2,9 @@
 
 use Image::Magick;
 use Storable;
+
 use strict;
+use warnings;
 
 my $out = shift @ARGV;
 

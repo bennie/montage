@@ -3,7 +3,9 @@
 use Image::Magick;
 use Math::Complex;
 use Storable;
+
 use strict;
+use warnings;
 
 ### Config
 
@@ -140,7 +142,7 @@ sub color_check {
   my $b = int($ab/$count);
   my $o = int($ao/$count);
 
-  return "$r, $g, $b, $o";
+  return ($r, $g, $b, $o);
 }
 
 sub find_closest {
@@ -150,7 +152,7 @@ sub find_closest {
   my $o = shift @_;
 
   my @best;
-  my $dist;
+  my $dist = 120000; # 16 bit color?
 
   for my $file ( keys %palette ) {
 
@@ -161,10 +163,10 @@ sub find_closest {
 
     my $tdist = sqrt(($r-$tr)^2 + ($g-$tg)^2 + ($b-$tb)^2);
 
-    if ( not defined $dist or $tdist < $dist ) {
+    if ( $tdist < $dist ) {
       @best = ( $file );
       $dist = $tdist;
-    } elsif ( defined $dist and $dist == $tdist ) {
+    } elsif ( $dist == $tdist ) {
       push @best, $file;
     }
   }
