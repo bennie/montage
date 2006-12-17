@@ -12,7 +12,7 @@ use warnings;
 my $pixel_width  = 100;
 my $pixel_height = 77;
 
-my $upscale = 8;
+my $upscale = 10;
 
 #my $pixel_width  = 20;
 #my $pixel_height = 15;
