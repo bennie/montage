@@ -9,8 +9,10 @@ $mw->withdraw;
 $mw->geometry('800x600+25+25');
 $mw->title('Image Montage');
 
-my $info = 'Version ' . (split ' ', '$Revision: 1.1 $')[1] . ' Copyright 1999-2006, Phillip Pollard';
-my $logo = $mw->Photo( -file=> 'app/logosm.gif' );
+my $info = 'Version ' . (split ' ', '$Revision: 1.2 $')[1] . ' Copyright 1999-2006, Phillip Pollard';
+
+my $logo  = $mw->Photo( -file=> 'app/logosm.gif' );
+my $blank = $mw->Photo( -file=> 'app/blank.gif'  );
 
 my $head = $mw->Frame();
 my $main = $mw->Frame();
@@ -34,6 +36,9 @@ $file->command(-label =>"Exit", -underline=>1, -command => \&do_exit );
 
 # Main body frame
 
+$head->Label(-image=>$blank)->pack(-side=>'left');
+$head->Label(-image=>$blank)->pack(-side=>'right');
+
 # Footer frame
 
 $foot->Label( -textvariable=>\$info, -relief=>'ridge', -anchor=>'w')
@@ -41,7 +46,7 @@ $foot->Label( -textvariable=>\$info, -relief=>'ridge', -anchor=>'w')
 
 # Pack the window
 
-$head->pack( -side=> 'top'    , -anchor=> 'w' );
+$head->pack( -side=> 'top'    , -anchor=> 'w', -expand=>1, -fill=>'both' );
 $foot->pack( -side=> 'bottom' , -anchor=> 'w'     , -fill=>'x' );
 $main->pack( -side=> 'left'   , -anchor=> 'n', -expand=>1, -fill=>'both' );
 
