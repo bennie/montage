@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/opt/local/bin/perl
 #
 # Copyright (C) 1999-2002, Phillip Pollard
 #
