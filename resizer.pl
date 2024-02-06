@@ -15,7 +15,7 @@
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
-#  Mr. Pollard may be written at 112 Roberts Ln, Lansdale, PA  19446 USA
+#  Mr. Pollard may be written at 3540 Burbank Rd #106, Wooster, OH 44691-8539 USA
 #  or e-mailed at <phil@crescendo.net>.
 
 select((select(STDOUT),$|=1)[0]);
