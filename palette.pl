@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use Image::Magick;
 use Storable;
@@ -7,10 +7,16 @@ use strict;
 use warnings;
 
 my $out = shift @ARGV;
+my $dir = shift @ARGV;
+
+opendir(my $dh, $dir);
+my @files = grep { !/^\./ } readdir $dh;
+closedir $dh;
 
 my %palette;
 
-for my $file (@ARGV) {
+for my $file (@files) {
+  $file = $dir .'/'. $file;
   next unless -r $file;
 
   my $image = Image::Magick->new;

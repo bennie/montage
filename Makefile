@@ -17,7 +17,7 @@ data/goal.jpg: data
 	@echo
 
 data/palette.db: data/resized.txt
-	./palette.pl $@ resized/*
+	./palette.pl $@ resized
 
 data/resized.txt: data resized
 	./resizer.pl
