@@ -1,29 +1,11 @@
 #!/usr/bin/env perl
-#
-# Copyright (C) 1999-2002, Phillip Pollard
-#
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by 
-#  the Free Software Foundation, version 2.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-#
-#  Mr. Pollard may be written at 3540 Burbank Rd #106, Wooster, OH 44691-8539 USA
-#  or e-mailed at <phil@crescendo.net>.
 
-select((select(STDOUT),$|=1)[0]);
-
+use Data::UUID;
+use File::Find;
 use Image::Magick;
 use strict;
 
-### Confuscate
+### Config
 
 my $debug = 1;
 
@@ -31,8 +13,13 @@ my $default_image  = 'images';
 my $default_resize = 'resized';
 my $default_size   = 100;
 my $height_ratio   = 1.5; # What do you multiply width to get height
+my $thumbnail_type = 'png';
 
-### Pragmata
+### Main
+
+select((select(STDOUT),$|=1)[0]);
+
+my $ug = Data::UUID->new;
 
 my $pref_height = int( $default_size * $height_ratio );
 my $pref_width  = $default_size;
@@ -49,37 +36,28 @@ if (! -e $thumbdir) { print "WARN: Directory $thumbdir dosen't exist, creating.\
 if (! -d $thumbdir) { die "ERROR: $thumbdir is not a directory\n"; }
 if (! -w $thumbdir) { die "ERROR: You do not have permissions to write to $thumbdir\n"; }
 
-my @files;
-
-opendir IMAGES, $imagedir;
-map { push @files, $_ if &is_image($_); } (readdir IMAGES);
-closedir IMAGES;
-
-sub numerically { $a <=> $b }
-@files = sort numerically @files;
-
-$debug && do { 
-  print "\nProcessing ", scalar(@files), " files.\n\n";
-  print "/---------------------------------------------------------------------\\\n";
-  print "|         Filename         |   Start Size   |    End Size    | Status |\n";
-  print "|--------------------------|----------------|----------------|--------|\n";
+$debug && do {
+  print "/-----------------------------------------------------------------------------\\\n";
+  print "|        Filename         |  Start Size  |  End Size   |         Status        |\n";
+  print "|-------------------------|--------------|-------------|-----------------------|\n";
 };
 
-foreach my $file (@files) {
-  my $in  = &clean($imagedir,$file);
-  my $out = &clean($thumbdir,$file);
+sub handle_file {
+	my $in = $File::Find::name;
+	return unless &is_image($in);
 
-  chop $out; chop $out; chop $out;
-  $out .= 'jpg';
-
-  &makethumb($file,$in,$out);
+    my $uuid = $ug->create_from_name_str(NameSpace_OID, $in);
+	my $out = &clean($thumbdir,$uuid.'.'.$thumbnail_type);
+	
+	&makethumb($_,$in,$out);
 }
+find({ wanted => \&handle_file, no_chdir=>1}, $default_image);
 
 ### Fine
 
-$debug && do { print "\\---------------------------------------------------------------------/\n\n"; };
+$debug && do { print "\\-----------------------------------------------------------------------------/\n\n"; };
 
-### Submarines
+### Subroutines
 
 sub clean {
   my $dir = join '/', @_;
@@ -92,12 +70,12 @@ sub makethumb {
   my $infile  = shift @_;
   my $outfile = shift @_;
 
-  $debug && do { 
-    print  '|'; 
-    printf "%25.25s", $name;
-    print  ' | '; 
+  $debug && do {
+    print  '|';
+    printf "%25s", substr($name, -25);
+    print  '|';
   };
-  
+
   my $image = Image::Magick->new;
   my $ret = $image->Read($infile);
 
@@ -112,8 +90,8 @@ sub makethumb {
   my $height = $image->Get('height');
 
   $debug && do {
-    printf "%14.14s", "$width x $height"; 
-    print  ' | ';
+    printf "%13.13s", $width.'x'.$height;
+    print  ' |';
   };
 
   my $current_ratio = $height / $width;
@@ -157,14 +135,17 @@ sub makethumb {
   $width  = $image->Get('width' );
   $height = $image->Get('height');
 
-  $debug && do { 
-    printf "%14.14s", "$width x $height"; 
-    print  ' | '; 
+  $debug && do {
+    printf "%9.9s", $width.'x'.$height;
+    print  ' |';
   };
 
   $image->Write($outfile);
-  
-  $debug && do { print " done! |\n"; };
+
+  $debug && do {
+    printf "%25.25s", substr($outfile, -25);
+    print "|\n";
+  };
 
   return ($width, $height);
 }

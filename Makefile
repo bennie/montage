@@ -1,7 +1,8 @@
 all: output.png
 
 clean:
-	rm -f resized/*
+	rm -rf resized
+	mkdir resized
 
 resize: 
 	rm -f data/resized.txt
