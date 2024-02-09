@@ -5,10 +5,10 @@ clean:
 	mkdir resized
 	rm -f output.png data/resized.txt
 
-resize: 
+resize:
 	rm -f data/resized.txt
 	make data/resized.txt
-	
+
 
 data resized:
 	mkdir -p $@
@@ -32,4 +32,3 @@ images:
 
 output.png: data/goal.jpg data/palette.db
 	./build.pl data/palette.db data/goal.jpg $@
-

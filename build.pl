@@ -113,8 +113,8 @@ warn $ret if $ret;
 
 sub color_check {
   my $image   = shift @_;
-  my $start_x = shift @_ || 0; 
-  my $start_y = shift @_ || 0; 
+  my $start_x = shift @_ || 0;
+  my $start_y = shift @_ || 0;
   my $fin_x   = shift @_ || $image->Get('width' );
   my $fin_y   = shift @_ || $image->Get('height');
   my $upscale = shift @_ || 1;
