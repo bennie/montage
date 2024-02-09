@@ -3,6 +3,7 @@ all: output.png
 clean:
 	rm -rf resized
 	mkdir resized
+	rm -f output.png data/resized.txt
 
 resize: 
 	rm -f data/resized.txt

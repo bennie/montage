@@ -110,27 +110,8 @@ sub makethumb {
     $new_width  = $pref_width;
   }
 
-  $image->Scale(height=>$new_height,width=>$new_width);
-
-  if ( $new_width != $pref_width ) {
-    my $delta = $new_width - $pref_width;
-
-    my $x1 = int($delta/2);
-    my $x2 = $delta - $x1;
-
-    $image->Crop( 'x' => $x1 );
-    $image->Crop( 'x' => (-1 * $x2) );
-  }
-
-  if ( $new_height != $pref_height ) {
-    my $delta = $new_height - $pref_height;
-
-    my $y1 = int($delta/2);
-    my $y2 = $delta - $y1;
-
-    $image->Crop( 'y' => $y1 );
-    $image->Crop( 'y' => (-1 * $y2) );
-  }
+  $image->Scale(height=>$new_height, width=>$new_width);
+  $image->Crop(height=>$pref_height, width=>$pref_width, gravity => 'Center');
 
   $width  = $image->Get('width' );
   $height = $image->Get('height');
