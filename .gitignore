@@ -1,2 +1,5 @@
 .DS_Store
 *.psd
+data/
+output.png
+resized/
