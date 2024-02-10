@@ -13,7 +13,7 @@ This project is to be able to make my own from a give set of images.
 
 1. Copy an image you want to montage to "data/goal.jpg"
 
-2. Edit "resizer.pl" and change the value of $default_image to your directory of source images.
+2. Edit "resizer.py" and change the value of $default_image to your directory of source images.
 
 3. Run "make"
 

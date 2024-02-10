@@ -22,7 +22,7 @@ data/palette.db: data/resized.txt
 	./palette.pl $@ resized
 
 data/resized.txt: data resized
-	./resizer.pl
+	./resizer.py
 	touch $@
 
 images:
