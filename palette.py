@@ -39,6 +39,5 @@ for path in Path(imagedir).rglob('*'):
         print(f"NOPE on {path}")
 
 cache.dump()
-
-cache_size = len(cache)
-print(f"{cache_size} items in the cache")
+total = cache.totalkeys()
+print(f"{total} items in the cache")
