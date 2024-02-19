@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+""" Crawl a given directory of images, and cache smaller versions for analysis """
 
 import os
 
@@ -8,44 +9,46 @@ from wand.image import Image
 
 # Config
 
-debug = 1
+DEBUG = 1
 
-imagedir = 'images'
-thumbdir = 'cache'
-default_size = 200
-height_ratio = 1.5    # What do you multiply width to get height
-thumbnail_type = 'png'
+IMAGEDIR = 'images'
+THUMBDIR = 'cache'
+DEFAULT_SIZE = 200
+HEIGHT_RATIO = 1.5    # What do you multiply width to get height
+THUMBNAIL_TYPE = 'png'
 
 # Main
 
-pref_height = int(default_size*height_ratio)
-pref_width = default_size
+PREF_HEIGHT = int(DEFAULT_SIZE*HEIGHT_RATIO)
+PREF_WIDTH = DEFAULT_SIZE
 
 
-def main():
-    assert os.path.exists(imagedir), f"ERROR: Image directory {imagedir} dosen't exist"
-    assert os.path.isdir(imagedir), f"ERROR: {imagedir} is not a directory"
-    assert os.access(imagedir, os.R_OK), f"ERROR: You do not have permissions to read from {imagedir}"
+def main(): # pylint: disable=missing-function-docstring
+    assert os.path.exists(IMAGEDIR), f"ERROR: Image directory {IMAGEDIR} dosen't exist"
+    assert os.path.isdir(IMAGEDIR), f"ERROR: {IMAGEDIR} is not a directory"
+    assert os.access(IMAGEDIR, os.R_OK), \
+        f"ERROR: You do not have permissions to read from {IMAGEDIR}"
 
-    if not os.path.exists(thumbdir):
-        print(f"WARN: Directory {thumbdir} dosen't exist, creating.")
-        mkdir(thumbdir)
-    assert os.path.isdir(thumbdir), f"ERROR: {thumbdir} is not a directory"
-    assert os.access(thumbdir, os.R_OK), f"ERROR: You do not have permissions to read from {thumbdir}"
+    if not os.path.exists(THUMBDIR):
+        print(f"WARN: Directory {THUMBDIR} dosen't exist, creating.")
+        os.mkdir(THUMBDIR)
+    assert os.path.isdir(THUMBDIR), f"ERROR: {THUMBDIR} is not a directory"
+    assert os.access(THUMBDIR, os.R_OK), \
+        f"ERROR: You do not have permissions to read from {THUMBDIR}"
 
-    if debug:
+    if DEBUG:
         print('/-----------------------------------------------------------------------------\\')
         print('|         Filename         | Start Size | End Size |          Status          |')
         print('|--------------------------|------------|----------|--------------------------|')
 
-    for path in Path(imagedir).rglob('*'):
+    for path in Path(IMAGEDIR).rglob('*'):
         if not path.is_file():
             continue
         if not is_image(path.name):
             continue
 
         uuid = uuid4()
-        outfile = os.path.join(thumbdir, f"{uuid}.{thumbnail_type}")
+        outfile = os.path.join(THUMBDIR, f"{uuid}.{THUMBNAIL_TYPE}")
 
         makethumb(path.name, path, outfile)
 
@@ -55,44 +58,48 @@ def main():
 
 
 def makethumb(name, infile, outfile):
+    """ Given a display name, infile and outfile designation: Create the smaller image """
     with Image(filename=infile) as img:
         width = img.width
         height = img.height
 
-        if debug:
-            print("|%26.26s|%11.11s |" % (name[-26:], f"{width}x{height}"), end='')
+        if DEBUG:
+            xy = f"{width}x{height}"
+            print(f"|{name[-26:]:26}|{xy:^12}|", end='')
 
         current_ratio = height / width
 
         new_height = new_width = None
-        if current_ratio > height_ratio:  # tall and narrow
-            delta = pref_width / width
+        if current_ratio > HEIGHT_RATIO:  # tall and narrow
+            delta = PREF_WIDTH / width
             new_height = int(height * delta)
-            new_width = pref_width
-        elif height_ratio > current_ratio:  # Fat and wide
-            delta = pref_height / height
-            new_height = pref_height
+            new_width = PREF_WIDTH
+        elif HEIGHT_RATIO > current_ratio:  # Fat and wide
+            delta = PREF_HEIGHT / height
+            new_height = PREF_HEIGHT
             new_width = int(width * delta)
         else:  # perfect size
-            new_height = pref_height
-            new_width = pref_width
+            new_height = PREF_HEIGHT
+            new_width = PREF_WIDTH
 
         img.resize(new_width, new_height)
-        img.crop(height=pref_height, width=pref_width, gravity='center')
+        img.crop(height=PREF_HEIGHT, width=PREF_WIDTH, gravity='center')
 
         width = img.width
         height = img.height
 
-        if debug:
-            print("%9.9s |" % (f"{width}x{height}"), end='')
+        if DEBUG:
+            xy = f"{width}x{height}"
+            print(f"{xy:^10}|", end='')
 
         img.save(filename=outfile)
 
-        if debug:
-            print("%26.26s|" % (outfile[-26:]))
+        if DEBUG:
+            print(f"{outfile[-26:]:26}|")
 
 
 def is_image(name):
+    """ Given an image name, check the extension to see if we consider it an image. """
     ext = ('.bmp', '.gif', '.jpg', '.jpeg', '.png', '.psd')
     if name.lower().endswith(tuple(ext)):
         return True
