@@ -11,7 +11,7 @@ from wand.image import Image
 debug = 1
 
 imagedir = 'images'
-thumbdir = 'resized'
+thumbdir = 'cache'
 default_size = 200
 height_ratio = 1.5    # What do you multiply width to get height
 thumbnail_type = 'png'
@@ -34,9 +34,9 @@ def main():
     assert os.access(thumbdir, os.R_OK), f"ERROR: You do not have permissions to read from {thumbdir}"
 
     if debug:
-        print('/------------------------------------------------------------------------------\\')
-        print('|         Filename         | Start Size | End Size |          Status           |')
-        print('|--------------------------|------------|----------|---------------------------|')
+        print('/-----------------------------------------------------------------------------\\')
+        print('|         Filename         | Start Size | End Size |          Status          |')
+        print('|--------------------------|------------|----------|--------------------------|')
 
     for path in Path(imagedir).rglob('*'):
         if not path.is_file():
@@ -84,7 +84,7 @@ def makethumb(name, infile, outfile):
         height = img.height
 
         if debug:
-            print("%10.10s |" % (f"{width}x{height}"), end='')
+            print("%9.9s |" % (f"{width}x{height}"), end='')
 
         img.save(filename=outfile)
 

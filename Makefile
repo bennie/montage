@@ -1,10 +1,10 @@
 all: output.png
 
 clean:
-	rm -rf resized
-	mkdir resized
+	rm -rf cache
+	mkdir cache
 	rm -f output.png data/resized.txt data/palette.db
-	mkdir data
+	if [ ! -d data ]; then mkdir data; fi
 
 resize:
 	rm -f data/resized.txt
@@ -16,7 +16,7 @@ data/goal.jpg: data
 	@echo
 
 data/palette.db: data/resized.txt
-	./palette.py $@ resized
+	./palette.py $@ cache
 
 data/resized.txt:
 	./resizer.py
