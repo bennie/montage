@@ -9,9 +9,7 @@ import pickledb
 
 from wand.image import Image
 
-def main():
-    """Main function of a command line script."""
-
+def main(): # pylint: disable=missing-function-docstring
     cache = pickledb.load(sys.argv[1], False)
     imagedir = sys.argv[2]
 
@@ -27,6 +25,10 @@ def main():
         try:
             with Image(filename=path) as img:
                 maxima = img.maxima
+                if maxima < 65535:
+                    print(f"NOPE (depth is {maxima}) on {path}")
+                    continue
+
                 blob = img.make_blob(format='RGB')
                 for cursor in range(0, img.width * img.height * 3, 3):
                     count_red += blob[cursor]
@@ -39,7 +41,7 @@ def main():
             av_b = int(count_blue/count)
 
             print(f"{av_r:03.0f} {av_g:03.0f} {av_b:03.0f} ({maxima:03.0f}) : {path}")
-            cache.set(str(path), [av_r, av_g, av_b, maxima])
+            cache.set(str(path), [av_r, av_g, av_b])
         except IndexError:
             print(f"NOPE on {path}")
 
