@@ -23,4 +23,4 @@ data/resized.txt:
 	touch $@
 
 output.png: data/goal.jpg data/palette.db
-	./build.pl data/palette.db data/goal.jpg $@
+	./build.py data/palette.db data/goal.jpg $@
