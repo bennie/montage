@@ -4,7 +4,7 @@
 import random
 import sys
 
-from math import sqrt
+from math import ceil, sqrt
 
 import pickledb
 
@@ -12,26 +12,30 @@ from wand.color import Color
 from wand.drawing import Drawing
 from wand.image import Image
 
+DEFAULT_SIZE = 200
+UPSCALE = 10
+COLOR_DISTANCE = 50
 
-def main(): # pylint: disable=missing-function-docstring
-    cache = pickledb.load(sys.argv[1], False)
-    goal_image = sys.argv[2]
-    output_image = sys.argv[3]
+
+def main(cache_file, goal_image, output_image): # pylint: disable=missing-function-docstring
+    cache = pickledb.load(cache_file, False)
 
     if cache.totalkeys() == 0:
         print(f"NO CACHE: {sys.argv[1]}")
         sys.exit(1)
 
-    pixel_width = 100
-    pixel_height = 77
-    upscale = 10
-
     print(f"We have {cache.totalkeys()} potential pixel images")
 
     img = Image(filename=goal_image)
-    width = img.width * upscale
-    height = img.height * upscale
+    width = img.width * UPSCALE
+    height = img.height * UPSCALE
     print(f"Our output should be {width} x {height}")
+
+    # Calculate the "pixel" size
+    height_ratio = img.height / img.width
+    print(f"Height ratio is {height_ratio}")
+    pixel_width = DEFAULT_SIZE
+    pixel_height = int(DEFAULT_SIZE * height_ratio)
 
     locations = {}
     count = 1
@@ -48,7 +52,7 @@ def main(): # pylint: disable=missing-function-docstring
             fin_y = start_y + pixel_height
             fin_y = min(fin_y, height)
 
-            color_data = color_check(img, start_x, start_y, fin_x, fin_y, upscale)
+            color_data = color_check(img, start_x, start_y, fin_x, fin_y)
             [file, delta] = find_closest(cache, color_data[0], color_data[1], color_data[2])
 
             draw.fill_color = Color(f"rgb({color_data[0]}, {color_data[1]}, {color_data[2]})")
@@ -56,16 +60,12 @@ def main(): # pylint: disable=missing-function-docstring
 
             cache_color = cache.get(file)
 
-            print(f"{count}: {start_x},{start_y} {fin_x},{fin_y} : {color_data} -> {delta} -> {cache_color} : {file}")
+            print(f"{count}: {start_x},{start_y} {fin_x},{fin_y} : "
+                  + f"{color_data} -> {delta} -> {cache_color} : {file}")
 
             if file not in locations:
-                locations[file] = {}
-            if start_x not in locations[file]:
-                locations[file][start_x] = {}
-            if start_y not in locations[file][start_x]:
-                locations[file][start_x][start_y] = 0
-
-            locations[file][start_x][start_y] += 1
+                locations[file] = []
+            locations[file].append([start_x, start_y])
 
             count += 1
             start_y = fin_y
@@ -78,34 +78,28 @@ def main(): # pylint: disable=missing-function-docstring
     print(f"Writing the output image ({output_image}) of {count} tiles")
 
     with Image(width=width, height=height) as out:
-        for file in locations:
+        for file, points in locations.items():
             print(f"{file} : ", end="")
             img = Image(filename=file)
             img.resize(height=pixel_height,width=pixel_width)
 
-            total_count = 0
-            for x in locations[file]:
-                for y in locations[file][x]:
-                    total_count += 1
-
+            total_count = len(points)
             count = 0
-            for x in locations[file]:
-                for y in locations[file][x]:
-                    count += 1
-                    print(f"\r{file} : {count} / {total_count}", end="")
-                    out.composite(img, x, y)
-
+            for point in points:
+                out.composite(img, point[0], point[1])
+                print(f"\r{file} : {count} / {total_count}", end="")
             print("")
+
         out.save(filename=output_image)
 
 # Subroutines
 
-def color_check(img, start_x, start_y, fin_x, fin_y, upscale):
-    """ Given an image handle, upscale, and location, calculate the average color """
-    start_x = int(start_x/upscale)
-    start_y = int(start_y/upscale)
-    fin_x = int(fin_x/upscale) + 1 if fin_x % upscale else int(fin_x/upscale)
-    fin_y = int(fin_y/upscale) + 1 if fin_y % upscale else int(fin_y/upscale)
+def color_check(img, start_x, start_y, fin_x, fin_y):
+    """ Given an image handle, UPSCALE, and location, calculate the average color """
+    start_x = int(start_x/UPSCALE)
+    start_y = int(start_y/UPSCALE)
+    fin_x = ceil(fin_x/UPSCALE)
+    fin_y = ceil(fin_y/UPSCALE)
 
     count = 0
     count_red = 0
@@ -137,7 +131,7 @@ def find_closest(cache, r, g, b):
         tr, tg, tb = cache.get(file)
         tdist = int(sqrt((r-tr)**2 + (g-tg)**2 + (b-tb)**2))
 
-        if tdist < dist:  # Collect files of increasing precision
+        if (tdist + COLOR_DISTANCE) < dist:  # Collect files of increasing precision
             best = [ file ]
             dist = tdist
         elif dist == tdist:
@@ -150,4 +144,4 @@ def find_closest(cache, r, g, b):
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
