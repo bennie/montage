@@ -3,7 +3,8 @@
 
 import os
 
-from uuid import uuid4
+import hashlib
+
 from pathlib import Path
 from wand.image import Image
 
@@ -14,13 +15,9 @@ DEBUG = 1
 IMAGEDIR = 'images'
 THUMBDIR = 'cache'
 DEFAULT_SIZE = 200
-HEIGHT_RATIO = 1.5    # What do you multiply width to get height
 THUMBNAIL_TYPE = 'png'
 
 # Main
-
-PREF_HEIGHT = int(DEFAULT_SIZE*HEIGHT_RATIO)
-PREF_WIDTH = DEFAULT_SIZE
 
 
 def main(): # pylint: disable=missing-function-docstring
@@ -36,6 +33,13 @@ def main(): # pylint: disable=missing-function-docstring
     assert os.access(THUMBDIR, os.R_OK), \
         f"ERROR: You do not have permissions to read from {THUMBDIR}"
 
+    assert os.path.exists('data/goal.jpg')
+    with Image(filename='data/goal.jpg') as img:
+        height_ratio = img.height / img.width
+        print(f"Height ratio is {height_ratio}")
+        pref_width = DEFAULT_SIZE
+        pref_height = int(DEFAULT_SIZE * height_ratio)
+
     if DEBUG:
         print('/-----------------------------------------------------------------------------\\')
         print('|         Filename         | Start Size | End Size |          Status          |')
@@ -47,43 +51,43 @@ def main(): # pylint: disable=missing-function-docstring
         if not is_image(path.name):
             continue
 
-        uuid = uuid4()
-        outfile = os.path.join(THUMBDIR, f"{uuid}.{THUMBNAIL_TYPE}")
+        md5 = hashlib.md5(str(path).encode()).hexdigest()
+        outfile = os.path.join(THUMBDIR, f"{md5}.{THUMBNAIL_TYPE}")
 
-        makethumb(path.name, path, outfile)
+        makethumb(path, outfile, height_ratio, pref_width, pref_height)
 
     print('\\-----------------------------------------------------------------------------/\n')
 
 # Subroutines
 
 
-def makethumb(name, infile, outfile):
+def makethumb(path, outfile, height_ratio, pref_width, pref_height):
     """ Given a display name, infile and outfile designation: Create the smaller image """
-    with Image(filename=infile) as img:
+    with Image(filename=path) as img:
         width = img.width
         height = img.height
 
         if DEBUG:
             xy = f"{width}x{height}"
-            print(f"|{name[-26:]:26}|{xy:^12}|", end='')
+            print(f"|{path.name[-26:]:26}|{xy:^12}|", end='')
 
         current_ratio = height / width
 
         new_height = new_width = None
-        if current_ratio > HEIGHT_RATIO:  # tall and narrow
-            delta = PREF_WIDTH / width
+        if current_ratio > height_ratio:  # tall and narrow
+            delta = pref_width / width
             new_height = int(height * delta)
-            new_width = PREF_WIDTH
-        elif HEIGHT_RATIO > current_ratio:  # Fat and wide
-            delta = PREF_HEIGHT / height
-            new_height = PREF_HEIGHT
+            new_width = pref_width
+        elif height_ratio > current_ratio:  # Fat and wide
+            delta = pref_height / height
+            new_height = pref_height
             new_width = int(width * delta)
         else:  # perfect size
-            new_height = PREF_HEIGHT
-            new_width = PREF_WIDTH
+            new_height = pref_height
+            new_width = pref_width
 
         img.resize(new_width, new_height)
-        img.crop(height=PREF_HEIGHT, width=PREF_WIDTH, gravity='center')
+        img.crop(height=pref_height, width=pref_width, gravity='center')
 
         width = img.width
         height = img.height
