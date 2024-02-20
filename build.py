@@ -8,6 +8,8 @@ from math import sqrt
 
 import pickledb
 
+from wand.color import Color
+from wand.drawing import Drawing
 from wand.image import Image
 
 
@@ -34,17 +36,27 @@ def main(): # pylint: disable=missing-function-docstring
     locations = {}
     count = 1
 
+    draw = Drawing()
+
     start_x = 0
     while start_x < width:
         fin_x = start_x + pixel_width
+        fin_x = min(fin_x, width)
+
         start_y = 0
         while start_y < height:
             fin_y = start_y + pixel_height
+            fin_y = min(fin_y, height)
 
-            color_data = color_check(img, start_x, start_y, fin_x, fin_y, upscale=1)
+            color_data = color_check(img, start_x, start_y, fin_x, fin_y, upscale)
             [file, delta] = find_closest(cache, color_data[0], color_data[1], color_data[2])
 
-            print(f"{count}: {start_x},{start_y} : {delta} : {file}")
+            draw.fill_color = Color(f"rgb({color_data[0]}, {color_data[1]}, {color_data[2]})")
+            draw.polygon([(start_x,start_y),(start_x,fin_y),(fin_x,fin_y),(fin_x,start_y)])
+
+            cache_color = cache.get(file)
+
+            print(f"{count}: {start_x},{start_y} {fin_x},{fin_y} : {color_data} -> {delta} -> {cache_color} : {file}")
 
             if file not in locations:
                 locations[file] = {}
@@ -59,11 +71,15 @@ def main(): # pylint: disable=missing-function-docstring
             start_y = fin_y
         start_x = fin_x
 
+    with Image(width=width, height=height) as pix:
+        draw.draw(pix)
+        pix.save(filename='pixelated.jpg')
+
     print(f"Writing the output image ({output_image}) of {count} tiles")
 
     with Image(width=width, height=height) as out:
-        for file in locations.items():
-            print("{file} : ", end="")
+        for file in locations:
+            print(f"{file} : ", end="")
             img = Image(filename=file)
             img.resize(height=pixel_height,width=pixel_width)
 
@@ -76,7 +92,7 @@ def main(): # pylint: disable=missing-function-docstring
             for x in locations[file]:
                 for y in locations[file][x]:
                     count += 1
-                    print(f"\r{file} : {count} / {total_count}")
+                    print(f"\r{file} : {count} / {total_count}", end="")
                     out.composite(img, x, y)
 
             print("")
@@ -84,24 +100,25 @@ def main(): # pylint: disable=missing-function-docstring
 
 # Subroutines
 
-def color_check(img, start_x, start_y, fin_x, fin_y, upscale=1):
+def color_check(img, start_x, start_y, fin_x, fin_y, upscale):
     """ Given an image handle, upscale, and location, calculate the average color """
     start_x = int(start_x/upscale)
     start_y = int(start_y/upscale)
-    fin_x = int(fin_x/upscale) + 1 if fin_x % upscale else fin_x/upscale
-    fin_y = int(fin_y/upscale) + 1 if fin_y % upscale else fin_y/upscale
+    fin_x = int(fin_x/upscale) + 1 if fin_x % upscale else int(fin_x/upscale)
+    fin_y = int(fin_y/upscale) + 1 if fin_y % upscale else int(fin_y/upscale)
 
     count = 0
     count_red = 0
     count_green = 0
     count_blue = 0
 
-    blob = img.make_blob(format='RGB')
-    for cursor in range(0, img.width * img.height * 3, 3):
-        count_red += blob[cursor]
-        count_green += blob[cursor + 1]
-        count_blue += blob[cursor + 2]
-        count += 1
+    with img[start_x:fin_x, start_y:fin_y] as cropped:
+        blob = cropped.make_blob(format='RGB')
+        for cursor in range(0, cropped.width * cropped.height * 3, 3):
+            count_red += blob[cursor]
+            count_green += blob[cursor + 1]
+            count_blue += blob[cursor + 2]
+            count += 1
 
     av_r = int(count_red/count)
     av_g = int(count_green/count)
@@ -111,16 +128,13 @@ def color_check(img, start_x, start_y, fin_x, fin_y, upscale=1):
 
 
 
-def find_closest(cache, r_in, g_in, b_in):
+def find_closest(cache, r, g, b):
     """ Dig through the cache to find the nearest RGB match """
     dist = 350  # 8-bit color reduced
     best = []
 
-    [r, g, b] = resample(r_in, g_in, b_in, dist)
-
     for file in cache.getall():
-        info = cache.get(file)
-        [tr, tg, tb] = resample(info[0], info[1], info[2], dist)
+        tr, tg, tb = cache.get(file)
         tdist = int(sqrt((r-tr)**2 + (g-tg)**2 + (b-tb)**2))
 
         if tdist < dist:  # Collect files of increasing precision
@@ -133,23 +147,6 @@ def find_closest(cache, r_in, g_in, b_in):
 
     choice = random.choice(best)
     return [ choice, dist ]
-
-
-def resample(r_in, g_in, b_in, depth):
-    """ Calculate resampling drift (positive) for a give RGB value """
-    resample_factor = ( depth + 1 ) / 256
-    r = int(r_in/resample_factor)
-    g = int(g_in/resample_factor)
-    b = int(b_in/resample_factor)
-
-    if r_in % resample_factor:
-        r += 1
-    if g_in % resample_factor:
-        g += 1
-    if b_in % resample_factor:
-        b += 1
-
-    return [r, g, b]
 
 
 if __name__ == "__main__":

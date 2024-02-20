@@ -10,7 +10,7 @@ resize:
 	rm -f data/resized.txt
 	make data/resized.txt
 
-data/goal.jpg: data
+data/goal.jpg:
 	@echo
 	@echo You should put the file in data/goal.jpg we should pixelify
 	@echo
