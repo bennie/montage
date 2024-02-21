@@ -4,8 +4,9 @@
 import random
 import sys
 
-from math import ceil, sqrt
+from math import ceil
 
+import numpy as np
 import pickledb
 
 from wand.color import Color
@@ -13,8 +14,8 @@ from wand.drawing import Drawing
 from wand.image import Image
 
 DEFAULT_SIZE = 200
-UPSCALE = 10
-COLOR_DISTANCE = 50
+UPSCALE = 20
+COLOR_DISTANCE = 25
 
 
 def main(cache_file, goal_image, output_image): # pylint: disable=missing-function-docstring
@@ -23,65 +24,35 @@ def main(cache_file, goal_image, output_image): # pylint: disable=missing-functi
     if cache.totalkeys() == 0:
         print(f"NO CACHE: {sys.argv[1]}")
         sys.exit(1)
+    else:
+        print(f"We have {cache.totalkeys()} potential pixel images")
 
-    print(f"We have {cache.totalkeys()} potential pixel images")
+    # Calculate some basic sizes
+    img = {'ref': Image(filename=goal_image)}
+    img['out_width'] = img['ref'].width * UPSCALE
+    img['out_height'] = img['ref'].height * UPSCALE
+    img['height_ratio'] = img['ref'].height / img['ref'].width
+    img['pixel_width'] = DEFAULT_SIZE
+    img['pixel_height'] = int(DEFAULT_SIZE * img['height_ratio'])
 
-    img = Image(filename=goal_image)
-    width = img.width * UPSCALE
-    height = img.height * UPSCALE
-    print(f"Our output should be {width} x {height}")
+    print(f"Our output should be {img['out_width']} x {img['out_height']}")
+    print(f"Height ratio is {img['height_ratio']}")
 
-    # Calculate the "pixel" size
-    height_ratio = img.height / img.width
-    print(f"Height ratio is {height_ratio}")
-    pixel_width = DEFAULT_SIZE
-    pixel_height = int(DEFAULT_SIZE * height_ratio)
+    # "big pixels" are where smaller images will form pixels
+    bigpixels = calculate_big_pixels(img)
+    draw_pixelated(img, bigpixels, "pixelated.jpg")
 
-    locations = {}
-    count = 1
+    # Find candidates to fill the big pixels
+    locations = calculate_locations(cache, bigpixels)
 
-    draw = Drawing()
+    # Write the montage
+    print(f"Writing the output image ({output_image}) of {len(bigpixels)} tiles")
 
-    start_x = 0
-    while start_x < width:
-        fin_x = start_x + pixel_width
-        fin_x = min(fin_x, width)
-
-        start_y = 0
-        while start_y < height:
-            fin_y = start_y + pixel_height
-            fin_y = min(fin_y, height)
-
-            color_data = color_check(img, start_x, start_y, fin_x, fin_y)
-            [file, delta] = find_closest(cache, color_data[0], color_data[1], color_data[2])
-
-            draw.fill_color = Color(f"rgb({color_data[0]}, {color_data[1]}, {color_data[2]})")
-            draw.polygon([(start_x,start_y),(start_x,fin_y),(fin_x,fin_y),(fin_x,start_y)])
-
-            cache_color = cache.get(file)
-
-            print(f"{count}: {start_x},{start_y} {fin_x},{fin_y} : "
-                  + f"{color_data} -> {delta} -> {cache_color} : {file}")
-
-            if file not in locations:
-                locations[file] = []
-            locations[file].append([start_x, start_y])
-
-            count += 1
-            start_y = fin_y
-        start_x = fin_x
-
-    with Image(width=width, height=height) as pix:
-        draw.draw(pix)
-        pix.save(filename='pixelated.jpg')
-
-    print(f"Writing the output image ({output_image}) of {count} tiles")
-
-    with Image(width=width, height=height) as out:
+    with Image(width=img['out_width'], height=img['out_height']) as out:
         for file, points in locations.items():
             print(f"{file} : ", end="")
             img = Image(filename=file)
-            img.resize(height=pixel_height,width=pixel_width)
+            img.resize(height=img['pixel_height'],width=img['pixel_width'])
 
             total_count = len(points)
             count = 0
@@ -93,6 +64,42 @@ def main(cache_file, goal_image, output_image): # pylint: disable=missing-functi
         out.save(filename=output_image)
 
 # Subroutines
+
+def calculate_big_pixels(img):
+    """ Given an size, and "big pixel" size, divide up locations for big pixels. """
+
+    bigpixels = []
+    start_x = 0
+    while start_x < img['out_width']:
+        fin_x = start_x + img['pixel_width']
+        fin_x = min(fin_x, img['out_width'])
+
+        start_y = 0
+        while start_y < img['out_height']:
+            fin_y = start_y + img['pixel_height']
+            fin_y = min(fin_y, img['out_height'])
+
+            color_data = color_check(img['ref'], start_x, start_y, fin_x, fin_y)
+            bigpixels.append([start_x, start_y, fin_x, fin_y, color_data])
+
+            start_y = fin_y
+        start_x = fin_x
+    return bigpixels
+
+
+def calculate_locations(cache, bigpixels):
+    """ Given a set of big-pixels and their colors, find the best image to fill those locations """
+    print('Calculating "big pixel" locations')
+    locations = {}
+    for bp in bigpixels:
+        [file, delta] = find_closest(cache, *bp[4])
+        cache_color = cache.get(file)
+        print(f"{bp[0]},{bp[1]} : {bp[4]} -> {delta:.2f} -> {cache_color} : {file}")
+        if file not in locations:
+            locations[file] = []
+        locations[file].append([bp[0], bp[1]])
+    return locations
+
 
 def color_check(img, start_x, start_y, fin_x, fin_y):
     """ Given an image handle, UPSCALE, and location, calculate the average color """
@@ -121,23 +128,35 @@ def color_check(img, start_x, start_y, fin_x, fin_y):
     return [av_r, av_g, av_b]
 
 
+def draw_pixelated(img, bigpixels, out_file):
+    """ Draw a flat-color "pixelated" version of the output for error checking. """
+    print("Drawing pixelated file.")
+    draw = Drawing()
+    for bp in bigpixels:
+        draw.fill_color = Color(f"rgb({bp[4][0]}, {bp[4][1]}, {bp[4][2]})")
+        draw.polygon([(bp[0],bp[1]),(bp[0],bp[3]),(bp[2],bp[3]),(bp[2],bp[1])])
+
+    print(f"Writing pixelated output for reference: {out_file}")
+    with Image(width=img['out_width'], height=img['out_height']) as pix:
+        draw.draw(pix)
+        pix.save(filename=out_file)
+
 
 def find_closest(cache, r, g, b):
-    """ Dig through the cache to find the nearest RGB match """
+    """ Find nearby RGB matches in the cache using Euclidian distance """
     dist = 350  # 8-bit color reduced
     best = []
+    point1 = np.array([r, g, b])
 
     for file in cache.getall():
-        tr, tg, tb = cache.get(file)
-        tdist = int(sqrt((r-tr)**2 + (g-tg)**2 + (b-tb)**2))
+        point2 = np.array(cache.get(file))
+        tdist = np.linalg.norm(point1 - point2)
 
         if (tdist + COLOR_DISTANCE) < dist:  # Collect files of increasing precision
             best = [ file ]
             dist = tdist
         elif dist == tdist:
             best.append(file)
-
-        #  warn "Dist: $dist\n" if $dist <= 0;
 
     choice = random.choice(best)
     return [ choice, dist ]
