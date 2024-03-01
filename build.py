@@ -51,13 +51,14 @@ def main(cache_file, goal_image, output_image): # pylint: disable=missing-functi
     with Image(width=img['out_width'], height=img['out_height']) as out:
         for file, points in locations.items():
             print(f"{file} : ", end="")
-            img = Image(filename=file)
-            img.resize(height=img['pixel_height'],width=img['pixel_width'])
+            new_pixel = Image(filename=file)
+            new_pixel.resize(height=img['pixel_height'],width=img['pixel_width'])
 
             total_count = len(points)
             count = 0
             for point in points:
-                out.composite(img, point[0], point[1])
+                count += 1
+                out.composite(new_pixel, point[0], point[1])
                 print(f"\r{file} : {count} / {total_count}", end="")
             print("")
 

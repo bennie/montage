@@ -1,9 +1,9 @@
-all: output.png
+'all: output.png
 
 clean:
 	rm -rf cache
 	mkdir cache
-	rm -f output.png data/resized.txt data/palette.db
+	rm -f pixelated.jpg output.png data/resized.txt data/palette.db
 	if [ ! -d data ]; then mkdir data; fi
 
 resize:
