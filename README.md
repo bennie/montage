@@ -33,4 +33,4 @@ If you wish to then repeat the process with a different image:
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+GPL 2 - See "LICENSE" in repo.
