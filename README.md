@@ -7,7 +7,11 @@ An image montage generator
 Remember those posters you might have seen? Where a character or scene from a movie was
 made out of a montage of hundreds of images of said movie? Yeah. Those montages are neat.
 
-This project is to be able to make my own from a give set of images.
+![The Fluffiest Death](examples/death.jpg?raw=true "The Fluffiest Death")
+
+![Closeup of Pixels](examples/closeup.jpg?raw=true "Closeup of 'Pixels'")
+
+This project is to be able to make my own from a given set of images.
 
 ## Directions
 
