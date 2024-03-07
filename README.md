@@ -31,6 +31,18 @@ If you wish to then repeat the process with a different image:
 
 3. "make"
 
+## How are you doing your color math?
+
+* An average is taken of each source frame. That is: sum all values of R, G, and B, and divide for average. The pixel is then determined to be that color.
+
+* The "nearest match" for the pixels is calculated via Euclidian distance on a cube:
+
+  ![Color Cube Distance](examples/math.png?raw=true "Color Cube Distance")
+
+  A range of acceptable distance is used and then random pixels that are within that range are selected to compose the montage.
+
+  Equasion above is credit to wikipedia. And more info can be found at: https://en.wikipedia.org/wiki/Euclidean_distance
+
 ## License
 
 GPL 2 - See "LICENSE" in repo.
