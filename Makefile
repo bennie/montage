@@ -10,9 +10,9 @@ resize:
 	rm -f data/resized.txt
 	make data/resized.txt
 
-data/goal.jpg:
+data/goal.png:
 	@echo
-	@echo You should put the file in data/goal.jpg we should pixelify
+	@echo You should put the file in data/goal.png we should pixelify
 	@echo
 
 data/palette.db: data/resized.txt
@@ -22,5 +22,5 @@ data/resized.txt:
 	./resizer.py
 	touch $@
 
-output.png: data/goal.jpg data/palette.db
-	./build.py data/palette.db data/goal.jpg $@
+output.png: data/goal.png data/palette.db
+	./build.py data/palette.db data/goal.png $@

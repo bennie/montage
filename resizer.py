@@ -33,8 +33,8 @@ def main(): # pylint: disable=missing-function-docstring
     assert os.access(THUMBDIR, os.R_OK), \
         f"ERROR: You do not have permissions to read from {THUMBDIR}"
 
-    assert os.path.exists('data/goal.jpg')
-    with Image(filename='data/goal.jpg') as img:
+    assert os.path.exists('data/goal.png')
+    with Image(filename='data/goal.png') as img:
         height_ratio = img.height / img.width
         print(f"Height ratio is {height_ratio}")
         pref_width = DEFAULT_SIZE
