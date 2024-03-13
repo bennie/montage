@@ -1,58 +1,54 @@
 #!/usr/bin/env python3
 """ Crawl a given directory of images, and cache smaller versions for analysis """
 
+import hashlib
 import os
 
-import hashlib
-
 from pathlib import Path
+
+import yaml
+
 from wand.image import Image
-
-# Config
-
-DEBUG = 1
-
-IMAGEDIR = 'images'
-THUMBDIR = 'cache'
-DEFAULT_SIZE = 200
-THUMBNAIL_TYPE = 'png'
-
-# Main
 
 
 def main(): # pylint: disable=missing-function-docstring
-    assert os.path.exists(IMAGEDIR), f"ERROR: Image directory {IMAGEDIR} dosen't exist"
-    assert os.path.isdir(IMAGEDIR), f"ERROR: {IMAGEDIR} is not a directory"
-    assert os.access(IMAGEDIR, os.R_OK), \
-        f"ERROR: You do not have permissions to read from {IMAGEDIR}"
+    with open('config.yaml', encoding="utf-8") as f:
+        config = yaml.safe_load(f)
 
-    if not os.path.exists(THUMBDIR):
-        print(f"WARN: Directory {THUMBDIR} dosen't exist, creating.")
-        os.mkdir(THUMBDIR)
-    assert os.path.isdir(THUMBDIR), f"ERROR: {THUMBDIR} is not a directory"
-    assert os.access(THUMBDIR, os.R_OK), \
-        f"ERROR: You do not have permissions to read from {THUMBDIR}"
+    assert os.path.exists(config['imagedir']), \
+        f"ERROR: Image directory {config['imagedir']} dosen't exist"
+    assert os.path.isdir(config['imagedir']), \
+        f"ERROR: {config['imagedir']} is not a directory"
+    assert os.access(config['imagedir'], os.R_OK), \
+        f"ERROR: You do not have permissions to read from {config['imagedir']}"
 
-    assert os.path.exists('data/goal.png')
-    with Image(filename='data/goal.png') as img:
+    if not os.path.exists(config['thumbdir']):
+        print(f"WARN: Directory {config['thumbdir']} dosen't exist, creating.")
+        os.mkdir(config['thumbdir'])
+    assert os.path.isdir(config['thumbdir']), \
+        f"ERROR: {config['thumbdir']} is not a directory"
+    assert os.access(config['thumbdir'], os.R_OK), \
+        f"ERROR: You do not have permissions to read from {config['thumbdir']}"
+
+    assert os.path.exists(config['goal'])
+    with Image(filename=config['goal']) as img:
         height_ratio = img.height / img.width
         print(f"Height ratio is {height_ratio}")
-        pref_width = DEFAULT_SIZE
-        pref_height = int(DEFAULT_SIZE * height_ratio)
+        pref_width = config['default_size']
+        pref_height = int(config['default_size'] * height_ratio)
 
-    if DEBUG:
-        print('/-----------------------------------------------------------------------------\\')
-        print('|         Filename         | Start Size | End Size |          Status          |')
-        print('|--------------------------|------------|----------|--------------------------|')
+    print('/-----------------------------------------------------------------------------\\')
+    print('|         Filename         | Start Size | End Size |          Status          |')
+    print('|--------------------------|------------|----------|--------------------------|')
 
-    for path in Path(IMAGEDIR).rglob('*'):
+    for path in Path(config['imagedir']).rglob('*'):
         if not path.is_file():
             continue
         if not is_image(path.name):
             continue
 
         md5 = hashlib.md5(str(path).encode()).hexdigest()
-        outfile = os.path.join(THUMBDIR, f"{md5}.{THUMBNAIL_TYPE}")
+        outfile = os.path.join(config['thumbdir'], f"{md5}.{config['thumbnail_type']}")
 
         makethumb(path, outfile, height_ratio, pref_width, pref_height)
 
@@ -67,9 +63,8 @@ def makethumb(path, outfile, height_ratio, pref_width, pref_height):
         width = img.width
         height = img.height
 
-        if DEBUG:
-            xy = f"{width}x{height}"
-            print(f"|{path.name[-26:]:26}|{xy:^12}|", end='')
+        xy = f"{width}x{height}"
+        print(f"|{path.name[-26:]:26}|{xy:^12}|", end='')
 
         current_ratio = height / width
 
@@ -92,14 +87,12 @@ def makethumb(path, outfile, height_ratio, pref_width, pref_height):
         width = img.width
         height = img.height
 
-        if DEBUG:
-            xy = f"{width}x{height}"
-            print(f"{xy:^10}|", end='')
+        xy = f"{width}x{height}"
+        print(f"{xy:^10}|", end='')
 
         img.save(filename=outfile)
 
-        if DEBUG:
-            print(f"{outfile[-26:]:26}|")
+        print(f"{outfile[-26:]:26}|")
 
 
 def is_image(name):

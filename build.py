@@ -8,14 +8,15 @@ from math import ceil
 
 import numpy as np
 import pickledb
+import yaml
 
 from wand.color import Color
 from wand.drawing import Drawing
 from wand.image import Image
 
-DEFAULT_SIZE = 200
-UPSCALE = 20
-COLOR_DISTANCE = 25
+
+with open('config.yaml', encoding="utf-8") as f:
+    config = yaml.safe_load(f)
 
 
 def main(cache_file, goal_image, output_image): # pylint: disable=missing-function-docstring
@@ -29,11 +30,11 @@ def main(cache_file, goal_image, output_image): # pylint: disable=missing-functi
 
     # Calculate some basic sizes
     img = {'ref': Image(filename=goal_image)}
-    img['out_width'] = img['ref'].width * UPSCALE
-    img['out_height'] = img['ref'].height * UPSCALE
+    img['out_width'] = img['ref'].width * config['upscale']
+    img['out_height'] = img['ref'].height * config['upscale']
     img['height_ratio'] = img['ref'].height / img['ref'].width
-    img['pixel_width'] = DEFAULT_SIZE
-    img['pixel_height'] = int(DEFAULT_SIZE * img['height_ratio'])
+    img['pixel_width'] = config['default_size']
+    img['pixel_height'] = int(config['default_size'] * img['height_ratio'])
 
     print(f"Our output should be {img['out_width']} x {img['out_height']}")
     print(f"Height ratio is {img['height_ratio']}")
@@ -103,11 +104,12 @@ def calculate_locations(cache, bigpixels):
 
 
 def color_check(img, start_x, start_y, fin_x, fin_y):
-    """ Given an image handle, UPSCALE, and location, calculate the average color """
-    start_x = int(start_x/UPSCALE)
-    start_y = int(start_y/UPSCALE)
-    fin_x = ceil(fin_x/UPSCALE)
-    fin_y = ceil(fin_y/UPSCALE)
+    """ Given an image handle, and bounds, calculate the average color """
+
+    start_x = int(start_x/config['upscale'])
+    start_y = int(start_y/config['upscale'])
+    fin_x = ceil(fin_x/config['upscale'])
+    fin_y = ceil(fin_y/config['upscale'])
 
     count = 0
     count_red = 0
@@ -153,7 +155,7 @@ def find_closest(cache, r, g, b):
         point2 = np.array(cache.get(file))
         tdist = np.linalg.norm(point1 - point2)
 
-        if (tdist + COLOR_DISTANCE) < dist:  # Collect files of increasing precision
+        if (tdist + config['color_distance']) < dist:  # Collect files of increasing precision
             best = [ file ]
             dist = tdist
         elif dist == tdist:

@@ -17,7 +17,7 @@ This project is to be able to make my own from a given set of images.
 
 1. Copy an image you want to montage to "data/goal.png"
 
-2. Edit "resizer.py" and change the value of IMAGEDIR to your directory of source images.
+2. Edit "comfig.yaml" and change the value of 'imagedir' to your directory of source images.
 
 3. Run "make"
 

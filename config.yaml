@@ -1,0 +1,14 @@
+# The goal image to work from
+goal: data/goal.png
+# How much bigger we want to make the final image compared to the goal
+upscale: 20
+# The directory that will be recursively searched for images
+imagedir: /Users/phillip/Pictures/bewbies
+# A directory where cached smaller versions of sourced images will be put
+thumbdir: cache
+# The default max size measurement for thumbnails
+default_size: 200
+# The format type of images we will create. (PNG is lossless)
+thumbnail_type: png
+# The distanced on a 8-bit euclidian cube we still consider to be "the same color"
+color_distance: 25
