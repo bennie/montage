@@ -4,6 +4,7 @@ import os.path
 
 from time import sleep
 
+from pathlib import Path
 from PyQt6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QFileDialog,
@@ -23,13 +24,28 @@ from PyQt6.QtCore import (  # pylint: disable=no-name-in-module
 class Worker(QObject):
     """ Background worker for image processing """
     finished = pyqtSignal()
-    progress = pyqtSignal(int)
+    progress = pyqtSignal(str)
+
+    def __init__(self, imagedir):
+        super(Worker, self).__init__()
+        self.imagedir = imagedir
 
     def run(self):
         """Long-running task."""
-        for i in range(5):
-            sleep(1)
-            self.progress.emit(i + 1)
+        for path in Path(self.imagedir).rglob('*'):
+            if not path.is_file():
+                continue
+
+            self.progress.emit(str(path))
+
+            #if not is_image(path.name):
+            #    continue
+
+            #md5 = hashlib.md5(str(path).encode()).hexdigest()
+            #outfile = os.path.join(config['thumbdir'], f"{md5}.{config['thumbnail_type']}")
+
+            #makethumb(path, outfile, height_ratio, pref_width, pref_height)
+
         self.finished.emit()
 
 class Window(QWidget):
@@ -75,12 +91,12 @@ class Window(QWidget):
         if os.path.exists(self.imagedir_label.text()) and \
            os.path.exists(self.cache_label.text()) and \
            os.path.isfile(self.goal_label.text()):
-            self.run_long_task()
+            self.run_long_task(self.imagedir_label.text())
 
-    def run_long_task(self):
+    def run_long_task(self, imagedir):
         """ A long running task to test """
         self.thread = QThread()
-        self.worker = Worker()
+        self.worker = Worker(imagedir)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
@@ -97,12 +113,13 @@ class Window(QWidget):
 
     def diediedie(self):
         """ Go Bye-Bye """
+        sleep(10)
         print("Exited...")
         app.quit()
 
     def report_progress(self, n):
         """ Update progress; stub for now """
-        self.progress_label.setText(f"Progress Update... {n}")
+        self.progress_label.setText(f"Loading files... {n[-25:]:25}")
 
     @pyqtSlot()
     def get_dir(self, label):
