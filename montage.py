@@ -2,14 +2,13 @@
 
 import os.path
 
-from time import sleep
-
 from pathlib import Path
 from PyQt6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QFileDialog,
     QGridLayout,
     QLabel,
+    QProgressBar,
     QPushButton,
     QWidget,
 )
@@ -21,13 +20,15 @@ from PyQt6.QtCore import (  # pylint: disable=no-name-in-module
     Qt
 )
 
-class Worker(QObject):
+from lib.montage import is_image
+
+class Worker(QObject):  # pylint: disable=too-few-public-methods
     """ Background worker for image processing """
     finished = pyqtSignal()
     progress = pyqtSignal(str)
 
     def __init__(self, imagedir):
-        super(Worker, self).__init__()
+        super().__init__()
         self.imagedir = imagedir
 
     def run(self):
@@ -35,11 +36,11 @@ class Worker(QObject):
         for path in Path(self.imagedir).rglob('*'):
             if not path.is_file():
                 continue
+            if not is_image(path.name):
+                continue
 
             self.progress.emit(str(path))
 
-            #if not is_image(path.name):
-            #    continue
 
             #md5 = hashlib.md5(str(path).encode()).hexdigest()
             #outfile = os.path.join(config['thumbdir'], f"{md5}.{config['thumbnail_type']}")
@@ -48,11 +49,15 @@ class Worker(QObject):
 
         self.finished.emit()
 
-class Window(QWidget):
+class Window(QWidget):  # pylint: disable=too-many-instance-attributes
     """ Main app class """
-
     def __init__(self):
         super().__init__()
+
+        self.files = []
+        self.thread = None
+        self.worker = None
+
         self.draw_ui()
 
     def draw_ui(self):
@@ -72,6 +77,11 @@ class Window(QWidget):
         self.goal_label = QLabel("Pick a Image")
 
         self.progress_label = QLabel("Select files above")
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0,1)
+
+        self.status_text =  QLabel("")
+        self.status_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout = QGridLayout()
         layout.addWidget(self.imagedir, 0, 0)
@@ -80,9 +90,9 @@ class Window(QWidget):
         layout.addWidget(self.cache_label, 1, 1)
         layout.addWidget(self.goal, 2, 0)
         layout.addWidget(self.goal_label, 2, 1)
-        layout.addWidget(self.progress_label, 3, 0, 1, 2)
-
-        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.progress_label, 3, 0)
+        layout.addWidget(self.progress_bar, 3, 1)
+        layout.addWidget(self.status_text, 4, 0, 1, 2)
 
         self.setLayout(layout)
 
@@ -108,18 +118,21 @@ class Window(QWidget):
         self.imagedir.setEnabled(False)
         self.cache.setEnabled(False)
         self.goal.setEnabled(False)
+        self.progress_bar.setRange(0,0)
+        self.progress_label.setText("Finding files... ")
 
-        self.thread.finished.connect(lambda: self.diediedie())
+        self.thread.finished.connect(lambda: self.diediedie())  # pylint: disable=unnecessary-lambda
 
     def diediedie(self):
         """ Go Bye-Bye """
-        sleep(10)
-        print("Exited...")
-        app.quit()
+        self.progress_bar.setRange(0,1)
+        self.progress_label.setText(f"{len(self.files)} files found")
+        self.status_text.setText("")
 
     def report_progress(self, n):
         """ Update progress; stub for now """
-        self.progress_label.setText(f"Loading files... {n[-25:]:25}")
+        self.files.append(n)
+        self.status_text.setText(f"{n[-25:]:25}")
 
     @pyqtSlot()
     def get_dir(self, label):
