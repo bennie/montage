@@ -1,4 +1,11 @@
+black==24.10.0
+click==8.1.8
+mypy-extensions==1.0.0
 numpy==2.2.1
+packaging==24.2
+pathspec==0.12.1
+pickleDB==0.9.2
+platformdirs==4.3.6
 PyQt6==6.8.0
 PyQt6-Qt6==6.8.1
 PyQt6_sip==13.9.1

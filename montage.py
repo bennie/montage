@@ -4,6 +4,9 @@ import hashlib
 import os.path
 
 from pathlib import Path
+
+import pickledb
+
 from PyQt6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QFileDialog,
@@ -55,7 +58,10 @@ class Worker(QObject):
             outfile = os.path.join(
                 self.config["thumbdir"], f"{md5}.{self.config['thumbnail_type']}"
             )
-            if not Path(outfile).is_file():
+            outfile_vid = os.path.join(
+                self.config["thumbdir"], f"{md5}-0.{self.config['thumbnail_type']}"
+            )
+            if not Path(outfile).is_file() and not Path(outfile_vid).is_file():
                 makethumb(
                     path,
                     outfile,
@@ -64,6 +70,51 @@ class Worker(QObject):
                     self.config["pref_height"],
                 )
             self.progress.emit(md5)
+        self.finished.emit()
+
+    def make_color_db(self):
+        """Long-running task."""
+        cache = self.config["color_db"]
+
+        for path in Path(self.config["thumbdir"]).rglob("*"):
+            if not path.is_file():
+                continue
+
+            count = 0
+            count_red = 0
+            count_green = 0
+            count_blue = 0
+
+            try:
+                with Image(filename=path) as img:
+                    maxima = img.maxima
+                    if maxima < 65535:
+                        print(f"NOPE (depth is {maxima}) on {path}")
+                        continue
+
+                    blob = img.make_blob(format="RGB")
+                    for cursor in range(0, img.width * img.height * 3, 3):
+                        count_red += blob[cursor]
+                        count_green += blob[cursor + 1]
+                        count_blue += blob[cursor + 2]
+                        count += 1
+
+                av_r = int(count_red / count)
+                av_g = int(count_green / count)
+                av_b = int(count_blue / count)
+
+                print(
+                    f"{av_r:03.0f} {av_g:03.0f} {av_b:03.0f} ({maxima:03.0f}) : {path}"
+                )
+                cache.set(str(path), [av_r, av_g, av_b])
+                self.progress.emit(
+                    f"{av_r:03.0f} {av_g:03.0f} {av_b:03.0f} ({maxima:03.0f}) : {path}"
+                )
+            except IndexError:
+                print(f"NOPE on {path}")
+
+        cache.dump()
+        print(f"{cache.totalkeys()} items in the cache")
         self.finished.emit()
 
 
@@ -133,6 +184,11 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
             self.config["imgdir"] = self.imagedir_label.text()
             self.config["thumbdir"] = self.cache_label.text()
             self.config["goal"] = self.goal_label.text()
+
+            self.config["color_db_file"] = os.path.join(
+                self.config["thumbdir"], "palette.db"
+            )
+            self.config["color_db"] = pickledb.load(self.config["color_db_file"], False)
 
             with Image(filename=self.config["goal"]) as img:
                 self.config["height_ratio"] = img.height / img.width
@@ -212,6 +268,56 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
     def cache_files_done(self):
         """We've found all the files, start processing"""
         self.progress_label.setText(f"{len(self.files)} files cached.")
+        self.status_text.setText("")
+
+        self.color_db()
+
+    def color_db(self):
+        """Go through the file-list and create thumnails in the cache"""
+        self.config["files"] = self.files  # This can't be good
+
+        self.thread = QThread()
+        self.worker = Worker(self.config)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.make_color_db)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.progress.connect(self.color_db_progress)
+        self.thread.start()
+
+        self.imagedir.setEnabled(False)
+        self.cache.setEnabled(False)
+        self.goal.setEnabled(False)
+        self.progress_bar.setRange(0, len(self.files))
+        self.progress_bar.setValue(0)
+        self.progress_label.setText("Analyzing color... ")
+
+        self.thread.finished.connect(
+            lambda: self.color_db_done()  # pylint: disable=unnecessary-lambda
+        )
+
+    def color_db_progress(self, md5val):
+        """Update progress; stub for now"""
+        self.status_text.setText(f"{md5val}")
+        newval = self.progress_bar.value() + 1
+        self.progress_label.setText(f"{newval} / {len(self.files)} analyzed")
+        self.progress_bar.setValue(newval)
+
+    def color_db_done(self):
+        """We've found all the files, start processing"""
+        self.progress_label.setText(f"{len(self.files)} files analyzed.")
+        self.status_text.setText("")
+
+    def render_montage(self):
+        """Draw the montage!"""
+        self.thread.finished.connect(
+            lambda: self.render_montage_done()  # pylint: disable=unnecessary-lambda
+        )
+
+    def render_montage_done(self):
+        """All done."""
+        self.progress_label.setText("Montage completed.")
         self.status_text.setText("")
 
     @pyqtSlot()
