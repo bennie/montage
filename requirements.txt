@@ -1,0 +1,6 @@
+numpy==2.2.1
+PyQt6==6.8.0
+PyQt6-Qt6==6.8.1
+PyQt6_sip==13.9.1
+PyYAML==6.0.2
+Wand==0.6.13

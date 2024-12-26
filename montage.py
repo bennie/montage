@@ -53,8 +53,9 @@ class Worker(QObject):
             md5 = hashlib.md5(str(path).encode()).hexdigest()
             outfile = os.path.join(self.config['thumbdir'],
                                    f"{md5}.{self.config['thumbnail_type']}")
-            makethumb(path, outfile, self.config['height_ratio'],
-                      self.config['pref_width'], self.config['pref_height'])
+            if not Path(outfile).is_file():
+                makethumb(path, outfile, self.config['height_ratio'],
+                          self.config['pref_width'], self.config['pref_height'])
             self.progress.emit(md5)
         self.finished.emit()
 
@@ -164,7 +165,6 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
 
         self.cache_files()
 
-
     def cache_files(self):
         """ Go through the file-list and create thumnails in the cache """
         self.config['files'] = self.files # This can't be good
@@ -196,7 +196,7 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
 
     def cache_files_done(self):
         """ We've found all the files, start processing """
-        self.progress_label.setText(f"{len(self.files)} files cached?")
+        self.progress_label.setText(f"{len(self.files)} files cached.")
         self.status_text.setText("")
 
     @pyqtSlot()
