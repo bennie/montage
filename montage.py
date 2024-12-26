@@ -76,8 +76,12 @@ class Worker(QObject):
         """Long-running task."""
         cache = self.config["color_db"]
 
-        for path in Path(self.config["thumbdir"]).rglob("*"):
+        for path in Path(self.config["thumbdir"]).rglob("*.png"):
             if not path.is_file():
+                continue
+
+            if cache.exists(str(path)):
+                self.progress.emit("cache hit.")
                 continue
 
             count = 0
@@ -103,9 +107,6 @@ class Worker(QObject):
                 av_g = int(count_green / count)
                 av_b = int(count_blue / count)
 
-                print(
-                    f"{av_r:03.0f} {av_g:03.0f} {av_b:03.0f} ({maxima:03.0f}) : {path}"
-                )
                 cache.set(str(path), [av_r, av_g, av_b])
                 self.progress.emit(
                     f"{av_r:03.0f} {av_g:03.0f} {av_b:03.0f} ({maxima:03.0f}) : {path}"
@@ -149,7 +150,11 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         self.goal.clicked.connect(self.get_file)
         self.goal_label = QLabel("Pick a Image")
 
-        self.progress_label = QLabel("Select files above")
+        self.macro_progress_label = QLabel("Select files above")
+        self.macro_progress_bar = QProgressBar()
+        self.macro_progress_bar.setRange(0, 5)
+
+        self.progress_label = QLabel("")
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 1)
 
@@ -163,9 +168,11 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         layout.addWidget(self.cache_label, 1, 1)
         layout.addWidget(self.goal, 2, 0)
         layout.addWidget(self.goal_label, 2, 1)
-        layout.addWidget(self.progress_label, 3, 0)
-        layout.addWidget(self.progress_bar, 3, 1)
-        layout.addWidget(self.status_text, 4, 0, 1, 2)
+        layout.addWidget(self.macro_progress_label, 3, 0)
+        layout.addWidget(self.macro_progress_bar, 3, 1)
+        layout.addWidget(self.progress_label, 4, 0)
+        layout.addWidget(self.progress_bar, 4, 1)
+        layout.addWidget(self.status_text, 5, 0, 1, 2)
 
         self.setLayout(layout)
 
@@ -214,8 +221,10 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         self.imagedir.setEnabled(False)
         self.cache.setEnabled(False)
         self.goal.setEnabled(False)
+
+        self.macro_progress_bar.setValue(1)
+        self.macro_progress_label.setText("Finding files... ")
         self.progress_bar.setRange(0, 0)
-        self.progress_label.setText("Finding files... ")
 
         self.thread.finished.connect(
             lambda: self.scan_for_files_done()  # pylint: disable=unnecessary-lambda
@@ -251,8 +260,10 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         self.imagedir.setEnabled(False)
         self.cache.setEnabled(False)
         self.goal.setEnabled(False)
+
+        self.macro_progress_bar.setValue(2)
+        self.macro_progress_label.setText("Caching images... ")
         self.progress_bar.setRange(0, len(self.files))
-        self.progress_label.setText("Caching images... ")
 
         self.thread.finished.connect(
             lambda: self.cache_files_done()  # pylint: disable=unnecessary-lambda
@@ -262,7 +273,7 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         """Update progress; stub for now"""
         self.status_text.setText(f"{md5val}")
         newval = self.progress_bar.value() + 1
-        self.progress_label.setText(f"{newval} / {len(self.files)} cached")
+        self.progress_label.setText(f"{newval} / {len(self.files)}")
         self.progress_bar.setValue(newval)
 
     def cache_files_done(self):
@@ -289,25 +300,25 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         self.imagedir.setEnabled(False)
         self.cache.setEnabled(False)
         self.goal.setEnabled(False)
+
+        self.macro_progress_bar.setValue(3)
+        self.macro_progress_label.setText("Analyzing colors... ")
         self.progress_bar.setRange(0, len(self.files))
         self.progress_bar.setValue(0)
-        self.progress_label.setText("Analyzing color... ")
 
         self.thread.finished.connect(
             lambda: self.color_db_done()  # pylint: disable=unnecessary-lambda
         )
 
-    def color_db_progress(self, md5val):
+    def color_db_progress(self, _):
         """Update progress; stub for now"""
-        self.status_text.setText(f"{md5val}")
         newval = self.progress_bar.value() + 1
-        self.progress_label.setText(f"{newval} / {len(self.files)} analyzed")
+        self.progress_label.setText(f"{newval} / {len(self.files)}")
         self.progress_bar.setValue(newval)
 
     def color_db_done(self):
         """We've found all the files, start processing"""
-        self.progress_label.setText(f"{len(self.files)} files analyzed.")
-        self.status_text.setText("")
+        self.status_text.setText(f"{len(self.files)} files analyzed.")
 
     def render_montage(self):
         """Draw the montage!"""
