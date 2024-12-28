@@ -320,16 +320,31 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         """We've found all the files, start processing"""
         self.status_text.setText(f"{len(self.files)} files analyzed.")
 
+        self.render_montage()
+
     def render_montage(self):
         """Draw the montage!"""
-        self.thread.finished.connect(
-            lambda: self.render_montage_done()  # pylint: disable=unnecessary-lambda
-        )
+        self.macro_progress_bar.setValue(4)
+        self.macro_progress_label.setText("Rendering montage... ")
+        self.progress_bar.setRange(0, len(self.files))
+        self.progress_bar.setValue(0)
+
+        self.progress_label.setText("")
+        self.status_text.setText("")
+
+        #self.thread.finished.connect(
+        #    lambda: self.render_montage_done()  # pylint: disable=unnecessary-lambda
+        #)
+
+        self.render_montage_done()
 
     def render_montage_done(self):
         """All done."""
-        self.progress_label.setText("Montage completed.")
-        self.status_text.setText("")
+
+        self.macro_progress_bar.setValue(5)
+        self.macro_progress_label.setText("")
+        self.status_text.setText("Montage completed.")
+        self.progress_bar.setValue(0)
 
     @pyqtSlot()
     def get_dir(self, label):
