@@ -161,6 +161,9 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         self.status_text = QLabel("")
         self.status_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        self.quit_button = QPushButton("Quit")
+        self.quit_button.clicked.connect(self.quit)
+
         layout = QGridLayout()
         layout.addWidget(self.imagedir, 0, 0)
         layout.addWidget(self.imagedir_label, 0, 1)
@@ -173,6 +176,7 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         layout.addWidget(self.progress_label, 4, 0)
         layout.addWidget(self.progress_bar, 4, 1)
         layout.addWidget(self.status_text, 5, 0, 1, 2)
+        layout.addWidget(self.quit_button, 6, 0, 1, 2)
 
         self.setLayout(layout)
 
@@ -337,6 +341,10 @@ class Window(QWidget):  # pylint: disable=too-many-instance-attributes
         #)
 
         self.render_montage_done()
+
+    def quit(self):
+        """Quit the App"""
+        self.close()
 
     def render_montage_done(self):
         """All done."""
